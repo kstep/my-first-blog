@@ -35,7 +35,7 @@ class PostViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             post = serializer.save(author=request.user,
                                    published_date=timezone.now())
-            return redirect('post-detail', post.pk)
+            return self.retrieve(request, post.pk, format)
         else:
             return Response({'post': serializer.data}, template_name='blog/post_edit.html')
 
@@ -44,6 +44,6 @@ class PostViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             post = serializer.save(author=request.user,
                                    published_date=timezone.now())
-            return redirect('post-detail', post.pk)
+            return self.retrieve(request, post.pk, format)
         else:
             return Response({'post': serializer}, template_name='blog/post_edit.html')

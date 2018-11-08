@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Jessica's Blog</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="css/blog.css">
+    <link href="http://fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="app">
+
+<div class="page-header">
+    <a href="#/posts/new" class="top-menu" v-on:click="createPost()"><span class="glyphicon glyphicon-plus"></span></a>
+    <h1><a href="#/posts" v-on:click="showAllPosts()">Jessica's Blog from Django Girls tutorial</a></h1>
+</div>
+
+<div class="content container">
+    <div class="row">
+        <div class="col-md-8">
+
+            <div v-if="route == '/posts'">
+            <div class="post" v-for="post in posts">
+                <div class="date">
+                    <p>published: {{ post.published_date }}</p>
+                </div>
+                <h1><a v-bind:href="'#/posts/' + post.id" v-on:click="showPost(post.id)">{{ post.title }}</a></h1>
+                <p>{{ post.text }}</p>
+            </div>
+            </div>
+
+            <div v-if="route == '/posts/:id'">
+            <div class="post">
+                <div class="date" v-if="post.published_date">
+                    {{ post.published_date }}
+                </div>
+                <a class="btn btn-default" v-bind:href="'#/posts/' + post.id + '/edit'" v-on:click="editPost()"><span class="glyphicon glyphicon-pencil"></span></a>
+                <h1>{{ post.title }}</h1>
+                <p>{{ post.text }}</p>
+            </div>
+            </div>
+
+
+            <div v-if="route == '/posts/:id/edit'">
+            <h1>New post</h1>
+            <form method="POST" class="post-form" v-on:submit.prevent="savePost()">
+                <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" class="form-control" id="title" v-model="post.title" />
+                </div>
+
+                <div class="form-group">
+                <label for="text">Text</label>
+                <textarea id="text" class="form-control" v-model="post.text"></textarea>
+                </div>
+
+                <button type="submit" class="save btn btn-default">Save</button>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<script type="application/javascript">
+    var csrfToken = /csrftoken=([^;]+)/.exec(document.cookie)[1];
+
+    var http = axios.create({
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    });
+    var app = new Vue({
+        el: '#app',
+        data: {
+            posts: [],
+            post: null,
+            route: null,
+        },
+        methods: {
+            showPost: function (post_id) {
+                var self = this;
+                http.get('/posts/' + post_id + '/').then(function (response) {
+                    self.route = '/posts/:id';
+                    self.post = response.data.post;
+                });
+            },
+            showAllPosts: function () {
+                var self = this;
+                http.get('/posts/').then(function (response) {
+                    self.route = '/posts';
+                    self.posts = response.data.posts;
+                });
+            },
+            savePost: function () {
+                var self = this;
+                http[self.post.id? 'put': 'post'](self.post.id? ('/posts/' + self.post.id + '/'): '/posts/', self.post).then(function (response) {
+                    self.route = '/posts/:id';
+                    self.post = response.data.post;
+                });
+            },
+            editPost: function () {
+                this.route = '/posts/:id/edit';
+            },
+            createPost: function () {
+                this.post = {};
+                this.route = '/posts/:id/edit';
+            }
+        },
+        mounted: function () {
+            this.showAllPosts();
+        }
+    });
+
+</script>
+</body>
+</html>
