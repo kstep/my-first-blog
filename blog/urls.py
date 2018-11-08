@@ -1,10 +1,17 @@
-from django.conf.urls import url
-from . import views
+from rest_framework.routers import DefaultRouter
+
+from blog.views import PostViewSet
 
 
-urlpatterns = [
-    url(r'^$', views.PostListView.as_view(), name='post_list'),
-    url(r'^post/(?P<pk>[0-9]+)/$', views.PostDetailsView.as_view(), name='post_detail'),
-    url(r'^post/new/$', views.PostNewView.as_view(), name='post_new'),
-    url(r'^post/(?P<pk>[0-9]+)/edit/$', views.PostEditView.as_view(), name='post_edit'),
-]
+class PostAsPutRouter(DefaultRouter):
+    def get_method_map(self, viewset, method_map):
+        method_map = super(PostAsPutRouter, self).get_method_map(viewset, method_map)
+        if 'put' in method_map and 'post' not in method_map:
+            method_map['post'] = method_map['put']
+        return method_map
+
+
+router = PostAsPutRouter()
+router.register('posts', PostViewSet, basename='post')
+
+urlpatterns = router.urls

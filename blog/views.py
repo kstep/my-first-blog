@@ -1,59 +1,49 @@
-from django import views
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
-from django.views.generic import TemplateView
+from rest_framework import viewsets, renderers
+from rest_framework.response import Response
 
-from .forms import PostForm
+from blog.serializers import PostSerializer
 from .models import Post
 
 
-class PostListView(TemplateView):
-    template_name = 'blog/post_list.html'
-    def get_context_data(self):
-        return {'posts': Post.objects.filter(published_date__lte=timezone.now()).order_by('published_date')}
+class PostViewSet(viewsets.ViewSet):
+    renderer_classes = (renderers.JSONRenderer, renderers.TemplateHTMLRenderer,)
 
+    def retrieve(self, request, pk, format='html'):
+        try:
+            post = PostSerializer(Post.objects.get(pk=pk))
+        except Post.DoesNotExist:
+            post = PostSerializer()
 
-class PostDetailsView(views.View):
-    def get(self, request, pk):
-        post = get_object_or_404(Post, pk=pk)
-        return render(request, 'blog/post_detail.html', {'post': post})
+        edit = format == 'html' and request.query_params.get('edit', False)
+        return Response({'post': post if edit else post.data},
+                        template_name='blog/post_edit.html' if edit else 'blog/post_detail.html')
 
+    def list(self, request, format='html'):
+        edit = format == 'html' and request.query_params.get('edit', False)
 
-class PostNewView(views.View):
-    template_name = 'blog/post_edit.html'
-
-    def post(self, request):
-       form = PostForm(request.POST)
-       if form.is_valid():
-           post = form.save(commit=False)
-           post.author = request.user
-           post.published_date = timezone.now()
-           post.save()
-           return redirect('post_detail', pk=post.pk)
-       else:
-           return render(request, self.template_name, {'form': form})
-
-    def get(self, request):
-        return render(request, self.template_name, {'form': PostForm()})
-
-
-class PostEditView(views.View):
-    template_name = 'blog/post_edit.html'
-
-    def post(self, request, pk):
-        post = get_object_or_404(Post, pk=pk)
-        form = PostForm(request.POST, instance=post)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.published_date = timezone.now()
-            post.save()
-            return redirect('post_detail', pk=post.pk)
+        if edit:
+            return Response({'post': PostSerializer()}, template_name='blog/post_edit.html')
         else:
-            return render(request, self.template_name, {'form': form})
+            serializer = PostSerializer(Post.objects.filter(published_date__lte=timezone.now()).order_by('published_date'), many=True)
+            return Response({'posts': serializer.data}, template_name='blog/post_list.html')
 
-    def get(self, request, pk):
+    def update(self, request, pk, format='html'):
         post = get_object_or_404(Post, pk=pk)
-        form = PostForm(instance=post)
-        return render(request, self.template_name, {'form': form})
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            post = serializer.save(author=request.user,
+                                   published_date=timezone.now())
+            return redirect('post-detail', post.pk)
+        else:
+            return Response({'post': serializer.data}, template_name='blog/post_edit.html')
 
+    def create(self, request, format='html'):
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            post = serializer.save(author=request.user,
+                                   published_date=timezone.now())
+            return redirect('post-detail', post.pk)
+        else:
+            return Response({'post': serializer}, template_name='blog/post_edit.html')
