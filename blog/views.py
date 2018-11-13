@@ -37,7 +37,7 @@ class PostViewSet(viewsets.ViewSet):
                                    published_date=timezone.now())
             return self.retrieve(request, post.pk, format)
         else:
-            return Response({'post': serializer.data}, template_name='blog/post_edit.html')
+            return Response({'errors': serializer.errors}, template_name='blog/post_edit.html', status=400)
 
     def create(self, request, format='html'):
         serializer = PostSerializer(data=request.data)
@@ -46,4 +46,4 @@ class PostViewSet(viewsets.ViewSet):
                                    published_date=timezone.now())
             return self.retrieve(request, post.pk, format)
         else:
-            return Response({'post': serializer}, template_name='blog/post_edit.html')
+            return Response({'errors': serializer.errors}, template_name='blog/post_edit.html', status=400)
