@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Jessica's Blog</title>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
     <link rel="stylesheet" href="css/blog.css">
@@ -68,11 +67,17 @@
 <script type="application/javascript">
     var csrfToken = /csrftoken=([^;]+)/.exec(document.cookie)[1];
 
-    var http = axios.create({
-        headers: {
-            'X-CSRFToken': csrfToken
-        }
-    });
+    function makeRequest(url, method, data) {
+        return fetch(url, {
+            method: method || 'GET',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(function (response) { return response.json(); });
+    }
     var app = new Vue({
         el: '#app',
         data: {
@@ -83,23 +88,24 @@
         methods: {
             showPost: function (post_id) {
                 var self = this;
-                http.get('/posts/' + post_id + '/').then(function (response) {
+                makeRequest('/posts/' + post_id + '.json').then(function (data) {
                     self.route = '/posts/:id';
-                    self.post = response.data.post;
+                    self.post = data.post;
                 });
             },
             showAllPosts: function () {
                 var self = this;
-                http.get('/posts/').then(function (response) {
+                makeRequest('/posts.json').then(function (data) {
                     self.route = '/posts';
-                    self.posts = response.data.posts;
+                    self.posts = data.posts;
                 });
             },
             savePost: function () {
                 var self = this;
-                http[self.post.id? 'put': 'post'](self.post.id? ('/posts/' + self.post.id + '/'): '/posts/', self.post).then(function (response) {
+                makeRequest((self.post.id? ('/posts/' + self.post.id): '/posts') + '.json', self.post.id? 'PUT': 'POST', self.post)
+                .then(function (data) {
                     self.route = '/posts/:id';
-                    self.post = response.data.post;
+                    self.post = data.post;
                 });
             },
             editPost: function () {
